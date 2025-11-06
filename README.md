@@ -1,41 +1,118 @@
-# TITLE
+# Comprehensive RAG Coding Assistant Project - AST vs Random Chunking Demonstration (Ollama Version)
 
-[![License: UPL](https://img.shields.io/badge/license-UPL-green)](https://img.shields.io/badge/license-UPL-green) [![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=oracle-devrel_test)](https://sonarcloud.io/dashboard?id=oracle-devrel_test)
+## Overview
 
-## THIS IS A NEW, BLANK REPO THAT IS NOT READY FOR USE YET.  PLEASE CHECK BACK SOON!
+This project demonstrates the differences between random chunk-based RAG and cAST (Abstract Syntax Tree) based chunking for code retrieval using Python. It uses Oracle Database 26ai for vector storage, tree-sitter for AST parsing, CodeBERT for embeddings, BGE for reranking, and Ollama for local metadata enrichment.
 
-## Introduction
-MISSING
+## Technical Stack
 
-## Getting Started
-MISSING
+- Python 3.10+
+- Oracle Database 26ai with python-oracledb
+- tree-sitter for AST
+- sentence-transformers with microsoft/codebert-base
+- FlagEmbedding for reranking
+- Ollama for metadata
+- argparse for CLI
+- tabulate, matplotlib, pandas for visualization
 
-### Prerequisites
-MISSING
+## Installation
 
-## Notes/Issues
-MISSING
+1. Clone the repository.
+2. Install dependencies: `pip install -r requirements.txt`
+3. Configure the application:
+   - Copy `config.yaml.example` to `config.yaml` and edit the values (Oracle credentials, Ollama settings, etc.).
+   - Alternatively, set environment variables as in `.env.example` (deprecated but supported as fallback).
+4. Install Ollama:
+   - Download from https://ollama.ai or use `curl -fsSL https://ollama.ai/install.sh | sh` (Linux/macOS).
+   - Pull a model: `ollama pull llama2`
+   - Start the server: `ollama serve`
+5. Ensure Oracle Database 26ai is running and accessible.
 
-## URLs
-* Nothing at this time
+## Usage
 
-## Contributing
-<!-- If your project has specific contribution requirements, update the
-    CONTRIBUTING.md file to ensure those requirements are clearly explained. -->
+CLI arguments override config.yaml values.
 
-This project welcomes contributions from the community. Before submitting a pull
-request, please [review our contribution guide](./CONTRIBUTING.md).
+### Setup Database
 
-## Security
+```bash
+python main.py --action setup
+```
+(Overrides from config.yaml will be used.)
 
-Please consult the [security guide](./SECURITY.md) for our responsible security
-vulnerability disclosure process.
+### Vectorize Sample Code
 
-## License
-Copyright (c) 2024 Oracle and/or its affiliates.
+```bash
+python main.py --action vectorize --chunking-method both --sample-file examples/sample.py --enrich-metadata true
+```
 
-Licensed under the Universal Permissive License (UPL), Version 1.0.
+### Search and Compare
 
-See [LICENSE](LICENSE.txt) for more details.
+```bash
+python main.py --action search --query "data validation" --top-k 20 --rerank true
+```
 
-ORACLE AND ITS AFFILIATES DO NOT PROVIDE ANY WARRANTY WHATSOEVER, EXPRESS OR IMPLIED, FOR ANY SOFTWARE, MATERIAL OR CONTENT OF ANY KIND CONTAINED OR PRODUCED WITHIN THIS REPOSITORY, AND IN PARTICULAR SPECIFICALLY DISCLAIM ANY AND ALL IMPLIED WARRANTIES OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.  FURTHERMORE, ORACLE AND ITS AFFILIATES DO NOT REPRESENT THAT ANY CUSTOMARY SECURITY REVIEW HAS BEEN PERFORMED WITH RESPECT TO ANY SOFTWARE, MATERIAL OR CONTENT CONTAINED OR PRODUCED WITHIN THIS REPOSITORY. IN ADDITION, AND WITHOUT LIMITING THE FOREGOING, THIRD PARTIES MAY HAVE POSTED SOFTWARE, MATERIAL OR CONTENT TO THIS REPOSITORY WITHOUT ANY REVIEW. USE AT YOUR OWN RISK. 
+## Testing
+
+Run unit tests:
+
+```bash
+python -m unittest discover tests -v
+```
+
+Tests cover chunking, embedding, retrieval, and metadata extraction.
+
+## Configuration
+
+Edit `config.yaml` for settings. Example structure:
+
+```yaml
+oracle:
+  user: your_oracle_user
+  password: your_password
+  dsn: your_dsn
+
+ollama:
+  endpoint: http://localhost:11434
+  model: llama2
+
+app:
+  verbose: true
+  chunk_size: 2000
+  overlap_percentage: 10
+  top_k_retrieval: 150
+  top_k_rerank: 20
+```
+
+For Ollama, ensure the server is running and the model is pulled.
+
+## Troubleshooting
+
+- If metadata extraction fails, check Ollama server and model.
+- For DB errors, verify Oracle connection details in config.yaml.
+- Tests may require mocking for external services.
+
+For more details, see `project_summary_ollama.md`.
+
+## Project Structure
+
+- `main.py`: CLI entry point
+- `chunking/`: Random and AST chunkers
+- `embedding/`: Embedder and reranker
+- `oracle_db/`: DB connection, schema, operations
+- `metadata/`: Ollama extractor
+- `retrieval/`: Search pipeline
+- `comparison/`: Analyzer and reporter
+- `examples/`: Sample code
+- `tests/`: Unit tests
+
+## Running Tests
+
+```bash
+python -m unittest discover tests
+```
+
+## Ollama Setup
+
+Ensure Ollama is running on the specified endpoint. No API keys required.
+
+For more details, see the project summary in project_summary_ollama.md.

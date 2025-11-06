@@ -1,0 +1,15 @@
+oracle:
+  user: scott
+  password: password
+  dsn: localhost:1521/freepdb1
+
+ollama:
+  endpoint: http://localhost:11434
+  model: llama2
+
+app:
+  verbose: false
+  chunk_size: 2000
+  overlap_percentage: 10
+  top_k_retrieval: 150
+  top_k_rerank: 20
