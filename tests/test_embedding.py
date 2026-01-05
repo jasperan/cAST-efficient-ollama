@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
-from embedding.embedder import CodeEmbedder
-from embedding.reranker import CodeReranker
+from cast_ollama.embedding.embedder import CodeEmbedder
+from cast_ollama.embedding.reranker import CodeReranker
 
 class TestEmbedding(unittest.TestCase):
     def test_embedder(self):

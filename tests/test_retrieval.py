@@ -1,13 +1,13 @@
 import unittest
 from unittest.mock import patch
-from retrieval.search import SearchPipeline
+from cast_ollama.retrieval.search import SearchPipeline
 import numpy as np
 
 class TestRetrieval(unittest.TestCase):
     def setUp(self):
         self.pipeline = SearchPipeline()
 
-    @patch('retrieval.search.search_by_vector')
+    @patch('cast_ollama.retrieval.search.search_by_vector')
     def test_search(self, mock_search):
         mock_results = [
             {'chunk_id': '1', 'chunk_content': 'code1', 'distance': 0.1, 'chunk_type': 'function'},
@@ -19,7 +19,7 @@ class TestRetrieval(unittest.TestCase):
         self.assertEqual(len(results), 2)
         self.assertIn('score', results[0])
 
-    @patch('retrieval.search.search_by_vector')
+    @patch('cast_ollama.retrieval.search.search_by_vector')
     def test_rerank(self, mock_search):
         mock_results = [
             {'chunk_id': '1', 'chunk_content': 'relevant code', 'distance': 0.1},

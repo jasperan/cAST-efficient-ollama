@@ -1,5 +1,5 @@
 import oracledb
-from config import Config
+from cast_ollama.config import Config
 import logging
 
 logger = logging.getLogger(__name__)

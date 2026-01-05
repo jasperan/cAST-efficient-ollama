@@ -1,8 +1,8 @@
 from typing import List, Dict, Optional
-from embedding.embedder import CodeEmbedder
-from embedding.reranker import CodeReranker
-from oracle_db.operations import search_by_vector, get_chunk_by_id
-from config import Config
+from cast_ollama.embedding.embedder import CodeEmbedder
+from cast_ollama.embedding.reranker import CodeReranker
+from cast_ollama.oracle_db.operations import search_by_vector, get_chunk_by_id
+from cast_ollama.config import Config
 import logging
 
 logger = logging.getLogger(__name__)

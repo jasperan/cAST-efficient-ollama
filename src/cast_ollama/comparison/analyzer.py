@@ -1,7 +1,7 @@
 import time
 from typing import List, Dict, Any
-from retrieval.search import SearchPipeline
-from config import Config
+from cast_ollama.retrieval.search import SearchPipeline
+from cast_ollama.config import Config
 import logging
 from statistics import mean
 

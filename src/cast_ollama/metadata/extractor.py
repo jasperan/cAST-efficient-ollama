@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from ollama import chat
-from config import Config
+from cast_ollama.config import Config
 import logging
 import hashlib
 

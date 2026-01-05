@@ -1,14 +1,14 @@
 import argparse
-from config import Config
-from oracle_db.schema import create_tables
-from chunking.random_chunker import RandomChunker
-from chunking.ast_chunker import ASTChunker
-from embedding.embedder import CodeEmbedder
-from metadata.extractor import OllamaMetadataExtractor
-from oracle_db.operations import bulk_insert_chunks, delete_all_chunks
-from retrieval.search import SearchPipeline
-from comparison.analyzer import Analyzer
-from comparison.reporter import Reporter
+from cast_ollama.config import Config
+from cast_ollama.oracle_db.schema import create_tables
+from cast_ollama.chunking.random_chunker import RandomChunker
+from cast_ollama.chunking.ast_chunker import ASTChunker
+from cast_ollama.embedding.embedder import CodeEmbedder
+from cast_ollama.metadata.extractor import OllamaMetadataExtractor
+from cast_ollama.oracle_db.operations import bulk_insert_chunks, delete_all_chunks
+from cast_ollama.retrieval.search import SearchPipeline
+from cast_ollama.comparison.analyzer import Analyzer
+from cast_ollama.comparison.reporter import Reporter
 import logging
 import uuid
 import os

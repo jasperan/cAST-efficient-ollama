@@ -1,13 +1,65 @@
 import oracledb
-from oracle_db.connection import DBConnection
+from cast_ollama.oracle_db.connection import DBConnection
 import json
 import logging
 from typing import List, Dict, Optional
 import numpy as np
+import sys
+
+# Attempt generic fallback import if needed
+try:
+    from cast_ollama.chroma_db import wrapper as chroma_wrapper
+    CHROMA_AVAILABLE = True
+except ImportError:
+    CHROMA_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
+# Global flag to track backend availability
+USE_ORACLE = True
+
+def check_backend():
+    global USE_ORACLE
+    try:
+        # Simple check if we can import oracledb and if connection works?
+        # For now, just rely on ImportError context or connection failure
+        # In this environment, oracledb package might exist but connection fails, or package missing.
+        # If 'oracledb' module is mocked or fails import, we switch.
+        pass
+    except:
+        pass
+
+# Determine backend preference at module load time or first call
+try:
+    # Try to initialize a pool or check connection? 
+    # Or lazily handle it. Lazily is safer.
+    pass
+except:
+    USE_ORACLE = False
+
+def _use_fallback():
+    global USE_ORACLE
+    if not USE_ORACLE:
+        return True
+    
+    # Try getting a connection to verify
+    try:
+        db = DBConnection()
+        conn = db.get_connection()
+        conn.close()
+        return False
+    except Exception as e:
+        logger.warning(f"Oracle DB connection failed ({e}). Switching to ChromaDB fallback.")
+        USE_ORACLE = False
+        return True
+
 def insert_chunk(chunk_id: str, file_path: str, chunk_content: str, metadata: Dict, embedding: np.ndarray, chunking_method: str):
+    if _use_fallback():
+        if CHROMA_AVAILABLE:
+            return chroma_wrapper.insert_chunk(chunk_id, file_path, chunk_content, metadata, embedding.tolist(), chunking_method)
+        else:
+            raise RuntimeError("Oracle unavailable and ChromaDB fallback not found.")
+
     db = DBConnection()
     conn = db.get_connection()
     cursor = conn.cursor()
@@ -45,6 +97,13 @@ def insert_chunk(chunk_id: str, file_path: str, chunk_content: str, metadata: Di
         conn.close()
 
 def bulk_insert_chunks(chunks: List[Dict]):
+    if _use_fallback():
+        if CHROMA_AVAILABLE:
+            # Chroma expects embedding list, Oracle ops usually got ndarray. Conversion handled in wrapper.
+            return chroma_wrapper.bulk_insert_chunks(chunks)
+        else:
+            raise RuntimeError("Oracle unavailable and ChromaDB fallback not found.")
+
     db = DBConnection()
     conn = db.get_connection()
     cursor = conn.cursor()
@@ -86,6 +145,12 @@ def bulk_insert_chunks(chunks: List[Dict]):
         conn.close()
 
 def search_by_vector(query_embedding: np.ndarray, limit: int = 150, chunking_method: Optional[str] = None) -> List[Dict]:
+    if _use_fallback():
+        if CHROMA_AVAILABLE:
+            return chroma_wrapper.search_by_vector(query_embedding, limit, chunking_method)
+        else:
+            raise RuntimeError("Oracle unavailable and ChromaDB fallback not found.")
+
     db = DBConnection()
     conn = db.get_connection()
     cursor = conn.cursor()
@@ -139,6 +204,12 @@ def search_by_vector(query_embedding: np.ndarray, limit: int = 150, chunking_met
         conn.close()
 
 def get_chunk_by_id(chunk_id: str) -> Optional[Dict]:
+    if _use_fallback():
+        if CHROMA_AVAILABLE:
+            return chroma_wrapper.get_chunk_by_id(chunk_id)
+        else:
+            raise RuntimeError("Oracle unavailable and ChromaDB fallback not found.")
+
     db = DBConnection()
     conn = db.get_connection()
     cursor = conn.cursor()
@@ -180,6 +251,12 @@ def get_chunk_by_id(chunk_id: str) -> Optional[Dict]:
         conn.close()
 
 def delete_all_chunks():
+    if _use_fallback():
+        if CHROMA_AVAILABLE:
+            return chroma_wrapper.delete_all_chunks()
+        else:
+            raise RuntimeError("Oracle unavailable and ChromaDB fallback not found.")
+
     db = DBConnection()
     conn = db.get_connection()
     cursor = conn.cursor()

@@ -1,5 +1,5 @@
 from typing import List, Dict
-from config import Config
+from cast_ollama.config import Config
 
 class RandomChunker:
     def __init__(self, chunk_size: int = 500, overlap_percentage: int = 10):

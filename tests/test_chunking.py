@@ -1,6 +1,6 @@
 import unittest
-from chunking.random_chunker import RandomChunker
-from chunking.ast_chunker import ASTChunker
+from cast_ollama.chunking.random_chunker import RandomChunker
+from cast_ollama.chunking.ast_chunker import ASTChunker
 
 class TestChunking(unittest.TestCase):
     def setUp(self):

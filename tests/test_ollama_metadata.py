@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import patch
-from metadata.extractor import OllamaMetadataExtractor, CodeMetadata
+from cast_ollama.metadata.extractor import OllamaMetadataExtractor, CodeMetadata
 
 class TestOllamaMetadata(unittest.TestCase):
     def setUp(self):
         self.extractor = OllamaMetadataExtractor()
 
-    @patch('metadata.extractor.chat')
+    @patch('cast_ollama.metadata.extractor.chat')
     def test_extract(self, mock_chat):
         mock_response = {
             'message': {
@@ -24,20 +24,20 @@ class TestOllamaMetadata(unittest.TestCase):
     def test_cache(self):
         code = "def test(): pass"
         # First call
-        with patch('metadata.extractor.chat') as mock_chat:
+        with patch('cast_ollama.metadata.extractor.chat') as mock_chat:
             mock_chat.return_value = {
                 'message': {'content': '{"purpose": "Cached", "input_params": "", "return_type": "", "docstring": null, "dependencies": [], "complexity": "low"}'}
             }
             metadata1 = self.extractor.extract(code)
 
         # Second call, should use cache
-        with patch('metadata.extractor.chat') as mock_chat:
+        with patch('cast_ollama.metadata.extractor.chat') as mock_chat:
             mock_chat.side_effect = Exception("Should not be called")
             metadata2 = self.extractor.extract(code)
 
         self.assertEqual(metadata1.purpose, metadata2.purpose)
 
-    @patch('metadata.extractor.chat', side_effect=Exception("Ollama error"))
+    @patch('cast_ollama.metadata.extractor.chat', side_effect=Exception("Ollama error"))
     def test_fallback(self, mock_chat):
         code = "def test(): pass"
         metadata = self.extractor.extract(code)

@@ -1,15 +1,17 @@
 import tree_sitter
+import tree_sitter_python
+from tree_sitter import Language, Parser
 from typing import List, Dict, Optional
-from config import Config
+from cast_ollama.config import Config
 import re
 
 class ASTChunker:
     def __init__(self, chunk_size: int = Config.CHUNK_SIZE, overlap_percentage: int = Config.OVERLAP_PERCENTAGE):
         self.chunk_size = chunk_size
         self.overlap_percentage = overlap_percentage
-        self.language = tree_sitter.Language('build/my-languages.so', 'python')  # Assume built
-        self.parser = tree_sitter.Parser()
-        self.parser.set_language(self.language)
+        # Modern tree-sitter initialization
+        self.language = Language(tree_sitter_python.language())
+        self.parser = Parser(self.language)
 
     def _count_non_whitespace(self, text: str) -> int:
         return len(re.sub(r'\s+', '', text))
