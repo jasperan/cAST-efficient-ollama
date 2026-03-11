@@ -17,6 +17,29 @@ This project demonstrates the differences between random chunk-based RAG and cAS
 
 ## Installation
 
+<!-- one-command-install -->
+> **One-command install** — clone, configure, and run in a single step:
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/jasperan/cAST-efficient-ollama/main/install.sh | bash
+> ```
+>
+> <details><summary>Advanced options</summary>
+>
+> Override install location:
+> ```bash
+> PROJECT_DIR=/opt/myapp curl -fsSL https://raw.githubusercontent.com/jasperan/cAST-efficient-ollama/main/install.sh | bash
+> ```
+>
+> Or install manually:
+> ```bash
+> git clone https://github.com/jasperan/cAST-efficient-ollama.git
+> cd cAST-efficient-ollama
+> # See below for setup instructions
+> ```
+> </details>
+
+
 1. Clone the repository.
 2. Install dependencies: `pip install -r requirements.txt`
 3. Configure the application:
