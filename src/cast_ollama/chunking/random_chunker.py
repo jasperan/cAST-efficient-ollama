@@ -1,8 +1,14 @@
-from typing import List, Dict
+from typing import Dict, List
+
 from cast_ollama.config import Config
 
+
 class RandomChunker:
-    def __init__(self, chunk_size: int = 500, overlap_percentage: int = 10):
+    def __init__(
+        self,
+        chunk_size: int = Config.CHUNK_SIZE,
+        overlap_percentage: int = Config.OVERLAP_PERCENTAGE,
+    ):
         self.chunk_size = chunk_size
         self.overlap_percentage = overlap_percentage
 
@@ -11,28 +17,27 @@ class RandomChunker:
         overlap_size = int(self.chunk_size * self.overlap_percentage / 100)
         start = 0
         code_length = len(code)
-
-        lines = code.splitlines(True)  # Preserve line endings
         current_line = 1
 
         while start < code_length:
             end = min(start + self.chunk_size, code_length)
             chunk_content = code[start:end]
 
-            # Calculate start and end lines
             chunk_lines = chunk_content.splitlines(True)
             start_line = current_line
             end_line = current_line + len(chunk_lines) - 1
 
-            chunks.append({
-                'content': chunk_content,
-                'start_line': start_line,
-                'end_line': end_line,
-                'char_start': start,
-                'char_end': end
-            })
+            chunks.append(
+                {
+                    "content": chunk_content,
+                    "start_line": start_line,
+                    "end_line": end_line,
+                    "char_start": start,
+                    "char_end": end,
+                }
+            )
 
             start += self.chunk_size - overlap_size
-            current_line = end_line - int(len(chunk_lines) * (self.overlap_percentage / 100)) + 1  # Approximate line overlap
+            current_line = end_line - int(len(chunk_lines) * (self.overlap_percentage / 100)) + 1
 
         return chunks

@@ -35,6 +35,7 @@ Temporary Items
 # Local authoring / agent state
 .omx/
 .venv/
+.cast_ollama/
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -65,3 +66,16 @@ SECURITY_REVIEW.md
 *_FEATURES.md
 *_ENHANCEMENTS.md
 *_REPORT.md
+demo_report.csv
+demo_report.json
+search_report.csv
+search_report.json
+walkthrough_report.csv
+walkthrough_report.json
+# Generated report data
+demo_report.csv
+demo_report.json
+search_report.csv
+search_report.json
+comparison_report.csv
+comparison_report.json

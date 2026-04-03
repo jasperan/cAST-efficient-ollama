@@ -1,11 +1,23 @@
-from pydantic import BaseModel
-from typing import Optional, List
-from ollama import chat
-from cast_ollama.config import Config
-import logging
+from __future__ import annotations
+
 import hashlib
+import logging
+from typing import List, Optional
+
+from pydantic import BaseModel
+
+from cast_ollama.config import Config
+
+try:
+    from ollama import chat
+except Exception as exc:  # pragma: no cover - depends on optional runtime package
+    chat = None
+    OLLAMA_IMPORT_ERROR = exc
+else:
+    OLLAMA_IMPORT_ERROR = None
 
 logger = logging.getLogger(__name__)
+
 
 class CodeMetadata(BaseModel):
     purpose: str
@@ -13,7 +25,8 @@ class CodeMetadata(BaseModel):
     return_type: str
     docstring: Optional[str]
     dependencies: List[str]
-    complexity: str  # 'low', 'medium', 'high'
+    complexity: str
+
 
 class OllamaMetadataExtractor:
     def __init__(self, endpoint: str = Config.OLLAMA_ENDPOINT, model: str = Config.OLLAMA_MODEL):
@@ -22,11 +35,6 @@ class OllamaMetadataExtractor:
         self.cache = {}
 
     def extract(self, code_chunk: str) -> CodeMetadata:
-        """
-        Extract metadata from code chunk using Ollama with structured outputs.
-        Uses Pydantic schema for guaranteed JSON structure.
-        """
-        # Check cache first
         chunk_hash = hashlib.sha256(code_chunk.encode()).hexdigest()
         if chunk_hash in self.cache:
             return self.cache[chunk_hash]
@@ -49,27 +57,28 @@ class OllamaMetadataExtractor:
         """
 
         try:
+            if chat is None:
+                raise RuntimeError(f"ollama package unavailable: {OLLAMA_IMPORT_ERROR}")
+
             response = chat(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 format=CodeMetadata.model_json_schema(),
                 stream=False,
-                options={"temperature": 0.0}  # For deterministic output
+                options={"temperature": 0.0},
             )
 
-            metadata = CodeMetadata.model_validate_json(response['message']['content'])
+            metadata = CodeMetadata.model_validate_json(response["message"]["content"])
             self.cache[chunk_hash] = metadata
             logger.info("Metadata extracted successfully.")
             return metadata
-
-        except Exception as e:
-            logger.error(f"Error extracting metadata: {e}")
-            # Return defaults on failure
+        except Exception as exc:
+            logger.error("Error extracting metadata: %s", exc)
             return CodeMetadata(
                 purpose="Unable to extract - check Ollama connection",
                 input_params="",
                 return_type="unknown",
                 docstring=None,
                 dependencies=[],
-                complexity="medium"
+                complexity="medium",
             )

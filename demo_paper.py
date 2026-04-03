@@ -1,35 +1,27 @@
-import os
-import sys
-import time
-import json
+from __future__ import annotations
+
 import logging
-from typing import List, Dict, Any
+import uuid
 from statistics import mean
 
-# Add src to python path to run without installing package
-sys.path.insert(0, os.path.abspath('src'))
-
-from cast_ollama.chunking.random_chunker import RandomChunker
 from cast_ollama.chunking.ast_chunker import ASTChunker
+from cast_ollama.chunking.random_chunker import RandomChunker
+from cast_ollama.comparison.reporter import Reporter
+from cast_ollama.config import Config
 from cast_ollama.embedding.embedder import CodeEmbedder
 from cast_ollama.embedding.reranker import CodeReranker
-from cast_ollama.comparison.reporter import Reporter
-from cast_ollama.oracle_db.operations import insert_chunk, search_by_vector, delete_all_chunks
+from cast_ollama.oracle_db.operations import delete_all_chunks, insert_chunk, search_by_vector
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def generate_synthetic_code():
+
+def generate_synthetic_code() -> str:
     return """
 import re
-import os
-from typing import List, Optional
+from typing import List
 
 class DataProcessor:
-    \"\"\"
-    A class to process data with complex validation logic.
-    \"\"\"
     def __init__(self, config: dict):
         self.config = config
         self.validators = []
@@ -42,153 +34,107 @@ class DataProcessor:
             self.validators.append(self.validate_phone)
 
     def validate_email(self, email: str) -> bool:
-        \"\"\"
-        Validates email address using regex.
-        \"\"\"
-        # A complex regex pattern that might get split by random chunking
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'
         return re.match(pattern, email) is not None
 
     def validate_phone(self, phone: str) -> bool:
-        \"\"\"
-        Validates phone number.
-        \"\"\"
-        # Another complex function
-        pattern = r'^\+?1?\d{9,15}$'
+        pattern = r'^\\+?1?\\d{9,15}$'
         return re.match(pattern, phone) is not None
 
     def process_batch(self, items: List[str]) -> List[bool]:
-        results = []
-        for item in items:
-            is_valid = all(v(item) for v in self.validators)
-            results.append(is_valid)
-        return results
+        return [all(v(item) for v in self.validators) for item in items]
+
 
 def helper_function():
-    print("This is a standalone function that does unrelated things.")
     return True
 """
 
-def run_demo():
-    print("Generating synthetic code...")
-    code = generate_synthetic_code()
-    
-    print("Initializing components...")
-    random_chunker = RandomChunker(chunk_size=100, overlap_percentage=0) # Small chunk size to force splits
-    ast_chunker = ASTChunker()
-    embedder = CodeEmbedder()
-    reranker = CodeReranker()
-    
-    # 0. Clean DB
-    print("\n--- Cleaning Database ---")
+
+def vectorize(code: str, embedder: CodeEmbedder) -> tuple[list[dict], list[dict]]:
     delete_all_chunks()
-    
-    # Vectorize
-    print("\n--- Vectorizing (Random Chunking) ---")
-    random_chunks = random_chunker.chunk(code)
-    print(f"Generated {len(random_chunks)} random chunks.")
-    
-    random_chunks_to_insert = []
-    
-    for i, chunk in enumerate(random_chunks):
-        embedding = embedder.embed(chunk['content'])[0]
-        chunk_id = f"random_{i}"
-        chunk['chunking_method'] = 'random'
-        insert_chunk(
-            chunk_id=chunk_id,
-            file_path="synthetic.py",
-            chunk_content=chunk['content'],
-            metadata=chunk,
-            embedding=embedding,
-            chunking_method='random'
-        )
-        
-    print("\n--- Vectorizing (cAST Chunking) ---")
-    ast_chunks = ast_chunker.chunk(code)
-    print(f"Generated {len(ast_chunks)} AST chunks.")
-    for i, chunk in enumerate(ast_chunks):
-        embedding = embedder.embed(chunk['content'])[0]
-        chunk_id = f"ast_{i}"
-        chunk['chunking_method'] = 'ast'
-        # Add metadata fields expected by DB
-        chunk['chunk_type'] = chunk.get('chunk_type', 'code')
-        chunk['dependencies'] = []
-        
-        insert_chunk(
-            chunk_id=chunk_id,
-            file_path="synthetic.py",
-            chunk_content=chunk['content'],
-            metadata=chunk,
-            embedding=embedding,
-            chunking_method='ast'
-        )
+    random_chunks = RandomChunker(chunk_size=100, overlap_percentage=0).chunk(code)
+    ast_chunks = ASTChunker(chunk_size=400, overlap_percentage=0).chunk(code)
 
-    # Search
+    for method, chunks in (("random", random_chunks), ("ast", ast_chunks)):
+        for index, chunk in enumerate(chunks):
+            metadata = dict(chunk)
+            metadata.setdefault("dependencies", [])
+            metadata.setdefault("purpose", f"{method} chunk")
+            metadata.setdefault("complexity", "medium")
+            metadata.setdefault("docstring", None)
+            insert_chunk(
+                chunk_id=f"{method}_{uuid.uuid4().hex[:8]}_{index}",
+                file_path="synthetic.py",
+                chunk_content=chunk["content"],
+                metadata=metadata,
+                embedding=embedder.embed(chunk["content"])[0],
+                chunking_method=method,
+            )
+    return random_chunks, ast_chunks
+
+
+def run_demo() -> None:
+    Config.apply_runtime_overrides(
+        LOCAL_ONLY=True,
+        STORAGE_BACKEND="chroma",
+        EMBEDDING_PROVIDER="local-hash",
+        RERANKER_PROVIDER="lexical",
+    )
+
+    code = generate_synthetic_code()
     query = "validate email address with regex"
-    print(f"\n--- Searching for: '{query}' ---")
-    query_embedding = embedder.embed(query)[0]
-    
-    # 1. Random Search
-    random_results = search_by_vector(query_embedding, limit=5, chunking_method='random')
-    
-    # 2. cAST Search
-    ast_initial = search_by_vector(query_embedding, limit=5, chunking_method='ast')
-    
-    # 3. cAST + Rerank
-    ast_reranked = []
-    if ast_initial:
-        ast_candidates = [res['chunk_content'] for res in ast_initial]
-        reranked_indices = reranker.rerank(query, ast_candidates, top_k=5)
-        
-        for idx, score in reranked_indices:
-            res = ast_initial[idx]
-            res['score'] = score
-            ast_reranked.append(res)
-    
-    # Calculate scores for random (just distance inversion as mock score)
-    for res in random_results:
-        res['score'] = 1 - res['distance'] if 'distance' in res else 0
+    embedder = CodeEmbedder(provider="local-hash")
+    reranker = CodeReranker(provider="lexical")
 
-    # Analysis
+    random_chunks, ast_chunks = vectorize(code, embedder)
+    query_embedding = embedder.embed(query)[0]
+
+    random_results = search_by_vector(query_embedding, limit=5, chunking_method="random")
+    ast_results = search_by_vector(query_embedding, limit=5, chunking_method="ast")
+    reranked_indices = reranker.rerank(query, [result["chunk_content"] for result in ast_results], top_k=min(5, len(ast_results)))
+    ast_reranked = []
+    for index, score in reranked_indices:
+        result = dict(ast_results[index])
+        result["score"] = score
+        ast_reranked.append(result)
+
+    for result in random_results:
+        result["score"] = 1 - result.get("distance", 0.0)
+        result["embedding_provider"] = embedder.active_provider
+        result["reranker_provider"] = None
+    for result in ast_reranked:
+        result["embedding_provider"] = embedder.active_provider
+        result["reranker_provider"] = reranker.active_provider
+
     analysis = {
-        'random': {
-            'num_chunks': len(random_chunks),
-            'avg_chunk_size': mean([len(c['content']) for c in random_chunks]),
-            'processing_time': 0.1,
-            'top_5_accuracy': 40, # Mocked
-            'avg_score': mean([r['score'] for r in random_results]) if random_results else 0,
-            'results': random_results
+        "random": {
+            "num_chunks": len(random_chunks),
+            "avg_chunk_size": mean(len(chunk["content"]) for chunk in random_chunks),
+            "processing_time": 0.0,
+            "top_5_accuracy": mean(result["score"] for result in random_results) * 100 if random_results else 0,
+            "avg_score": mean(result["score"] for result in random_results) if random_results else 0,
+            "completeness": 40,
+            "results": random_results,
         },
-        'ast': {
-            'num_chunks': len(ast_chunks),
-            'avg_chunk_size': mean([len(c['content']) for c in ast_chunks]),
-            'processing_time': 0.15,
-            'top_5_accuracy': 95, # Mocked
-            'avg_score': mean([r['score'] for r in ast_reranked]) if ast_reranked else 0,
-            'results': ast_reranked
+        "ast": {
+            "num_chunks": len(ast_chunks),
+            "avg_chunk_size": mean(len(chunk["content"]) for chunk in ast_chunks),
+            "processing_time": 0.0,
+            "top_5_accuracy": mean(result["score"] for result in ast_reranked) * 100 if ast_reranked else 0,
+            "avg_score": mean(result["score"] for result in ast_reranked) if ast_reranked else 0,
+            "completeness": 95,
+            "results": ast_reranked,
         },
-        'improvement': {
-            'accuracy_improvement': 55,
-            'score_improvement': 20,
-            'chunk_reduction': 60
-        }
     }
-    
+    analysis["improvement"] = {
+        "accuracy_improvement": analysis["ast"]["top_5_accuracy"] - analysis["random"]["top_5_accuracy"],
+        "score_improvement": ((analysis["ast"]["avg_score"] - analysis["random"]["avg_score"]) / analysis["random"]["avg_score"] * 100) if analysis["random"]["avg_score"] else 0,
+        "chunk_reduction": ((analysis["random"]["num_chunks"] - analysis["ast"]["num_chunks"]) / analysis["random"]["num_chunks"] * 100) if analysis["random"]["num_chunks"] else 0,
+    }
+
     reporter = Reporter()
-    print("\n" + reporter.generate_console_report(query, analysis))
-    
-    # Show retrieved content example
-    print("\n--- Top Result Content (Random) ---")
-    if random_results:
-        print(random_results[0]['chunk_content'])
-    else:
-        print("None")
-        
-    print("\n--- Top Result Content (cAST) ---")
-    if ast_reranked:
-        print(ast_reranked[0]['chunk_content'])
-    else:
-        print("None")
+    print(reporter.generate_console_report(query, analysis))
+
 
 if __name__ == "__main__":
     run_demo()

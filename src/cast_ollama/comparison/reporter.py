@@ -1,86 +1,109 @@
-from typing import List, Dict, Any
-from tabulate import tabulate
-import pandas as pd
+from __future__ import annotations
+
 import json
-import os
 import logging
+from typing import Any, Dict, List
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+
 class Reporter:
+    def _render_method(self, label: str, metrics: Dict[str, Any], issues: List[str]) -> List[str]:
+        lines = [f"{label} RESULTS:"]
+        if "error" in metrics:
+            lines.append(f"└─ Status: {metrics['error']}")
+            if metrics.get("processing_time") is not None:
+                lines.append(f"   Processing Time: {metrics['processing_time']:.2f}s")
+            lines.append("")
+            return lines
+
+        lines.append(f"├─ Chunks Generated: {metrics['num_chunks']}")
+        lines.append(f"├─ Avg Chunk Size: {metrics['avg_chunk_size']:.0f} chars")
+        lines.append(f"├─ Processing Time: {metrics['processing_time']:.2f}s")
+        lines.append(f"├─ Top-5 Accuracy: {metrics['top_5_accuracy']:.0f}%")
+        lines.append(f"├─ Avg Score: {metrics['avg_score']:.2f}")
+        lines.append("└─ Notes:")
+        lines.extend(f"   • {issue}" for issue in issues)
+        lines.append("")
+        return lines
+
     def generate_console_report(self, query: str, analysis: Dict[str, Any]) -> str:
-        report = []
-        report.append("┌─────────────────────────────────────────────────────────────────────┐")
-        report.append("│                  CHUNKING STRATEGY COMPARISON REPORT                │")
-        report.append("└─────────────────────────────────────────────────────────────────────┘")
-        report.append(f"\nQuery: \"{query}\"\n")
-        report.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+        report = [
+            "┌─────────────────────────────────────────────────────────────────────┐",
+            "│                  CHUNKING STRATEGY COMPARISON REPORT                │",
+            "└─────────────────────────────────────────────────────────────────────┘",
+            f"\nQuery: \"{query}\"\n",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
+        ]
 
-        if 'random' in analysis:
-            random = analysis['random']
-            report.append("RANDOM CHUNKING RESULTS:")
-            report.append(f"├─ Chunks Generated: {random['num_chunks']}")
-            report.append(f"├─ Avg Chunk Size: {random['avg_chunk_size']:.0f} chars")
-            report.append(f"├─ Processing Time: {random['processing_time']:.2f}s")
-            report.append(f"├─ Top-5 Accuracy: {random['top_5_accuracy']:.0f}%")
-            report.append(f"├─ Avg Score: {random['avg_score']:.2f}")
-            report.append("└─ Issues: ")
-            report.append("   • Function split across chunks")
-            report.append("   • Missing context for complete understanding\n")
+        if "random" in analysis:
+            report.extend(
+                self._render_method(
+                    "RANDOM CHUNKING",
+                    analysis["random"],
+                    [
+                        "Function boundaries may be split across chunks",
+                        "Context can be incomplete for precise retrieval",
+                    ],
+                )
+            )
 
-        if 'ast' in analysis:
-            ast = analysis['ast']
-            report.append("CASTS (AST-BASED) RESULTS:")
-            report.append(f"├─ Chunks Generated: {ast['num_chunks']}")
-            report.append(f"├─ Avg Chunk Size: {ast['avg_chunk_size']:.0f} chars")
-            report.append(f"├─ Processing Time: {ast['processing_time']:.2f}s (with reranking)")
-            report.append(f"├─ Top-5 Accuracy: {ast['top_5_accuracy']:.0f}%")
-            report.append(f"├─ Avg Score: {ast['avg_score']:.2f}")
-            report.append("└─ Advantages:")
-            report.append("   • Complete functions preserved")
-            report.append("   • Better semantic relevance")
-            report.append("   • Reduced chunks to search\n")
+        if "ast" in analysis:
+            report.extend(
+                self._render_method(
+                    "cAST (AST-BASED)",
+                    analysis["ast"],
+                    [
+                        "Function and class boundaries are preserved",
+                        "Semantic retrieval quality improves with structured chunks",
+                        "Optional reranking improves top-result relevance",
+                    ],
+                )
+            )
 
-        if 'improvement' in analysis:
-            imp = analysis['improvement']
+        if "improvement" in analysis:
+            improvement = analysis["improvement"]
             report.append("RERANKING IMPACT (cAST only):")
-            report.append(f"├─ Accuracy Improvement: +{imp['accuracy_improvement']:.1f}%")
-            report.append(f"├─ Score Improvement: +{imp['score_improvement']:.1f}%")
-            report.append(f"├─ Chunk Reduction: {imp['chunk_reduction']:.1f}%")
-            report.append("└─ Processing Time: Additional ~0.12s (simulated)\n")
+            report.append(f"├─ Accuracy Improvement: +{improvement['accuracy_improvement']:.1f}%")
+            report.append(f"├─ Score Improvement: +{improvement['score_improvement']:.1f}%")
+            report.append(f"├─ Chunk Reduction: {improvement['chunk_reduction']:.1f}%")
+            report.append("└─ Processing Time: Additional reranking cost depends on backend\n")
 
         report.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-
         return "\n".join(report)
 
     def generate_full_report(self, full_results: List[Dict[str, Any]]) -> None:
         for item in full_results:
-            print(self.generate_console_report(item['query'], item['analysis']))
+            print(self.generate_console_report(item["query"], item["analysis"]))
 
-    def export_to_csv(self, full_results: List[Dict[str, Any]], filename: str = 'comparison_report.csv') -> None:
+    def export_to_csv(self, full_results: List[Dict[str, Any]], filename: str = "comparison_report.csv") -> None:
         data = []
         for item in full_results:
-            query = item['query']
-            analysis = item['analysis']
-            for method in ['random', 'ast']:
-                if method in analysis:
-                    metrics = analysis[method]
-                    data.append({
-                        'query': query,
-                        'method': method,
-                        'num_chunks': metrics['num_chunks'],
-                        'avg_chunk_size': metrics['avg_chunk_size'],
-                        'processing_time': metrics['processing_time'],
-                        'top_5_accuracy': metrics['top_5_accuracy'],
-                        'avg_score': metrics['avg_score'],
-                        'completeness': metrics['completeness']
-                    })
+            query = item["query"]
+            analysis = item["analysis"]
+            for method in ["random", "ast"]:
+                metrics = analysis.get(method)
+                if not metrics or "error" in metrics:
+                    continue
+                data.append(
+                    {
+                        "query": query,
+                        "method": method,
+                        "num_chunks": metrics["num_chunks"],
+                        "avg_chunk_size": metrics["avg_chunk_size"],
+                        "processing_time": metrics["processing_time"],
+                        "top_5_accuracy": metrics["top_5_accuracy"],
+                        "avg_score": metrics["avg_score"],
+                        "completeness": metrics["completeness"],
+                    }
+                )
 
-        df = pd.DataFrame(data)
-        df.to_csv(filename, index=False)
-        logger.info(f"Exported to {filename}")
+        pd.DataFrame(data).to_csv(filename, index=False)
+        logger.info("Exported to %s", filename)
 
-    def export_to_json(self, full_results: List[Dict[str, Any]], filename: str = 'comparison_report.json') -> None:
-        with open(filename, 'w') as f:
-            json.dump(full_results, f, indent=4)
-        logger.info(f"Exported to {filename}")
+    def export_to_json(self, full_results: List[Dict[str, Any]], filename: str = "comparison_report.json") -> None:
+        with open(filename, "w", encoding="utf-8") as handle:
+            json.dump(full_results, handle, indent=4)
+        logger.info("Exported to %s", filename)

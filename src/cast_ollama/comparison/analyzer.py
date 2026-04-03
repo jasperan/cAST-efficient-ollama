@@ -1,71 +1,101 @@
-import time
-from typing import List, Dict, Any
-from cast_ollama.retrieval.search import SearchPipeline
-from cast_ollama.config import Config
-import logging
-from statistics import mean
+from __future__ import annotations
 
-logger = logging.getLogger(__name__)
+import time
+from statistics import mean
+from typing import Any, Dict, List, Sequence
+
+from cast_ollama.config import Config
+from cast_ollama.retrieval.search import SearchPipeline
+
 
 class Analyzer:
-    def __init__(self):
-        self.search_pipeline = SearchPipeline()
+    def __init__(
+        self,
+        *,
+        search_pipeline: SearchPipeline | None = None,
+        embedder_backend: str | None = None,
+        reranker_backend: str | None = None,
+    ):
+        self.search_pipeline = search_pipeline or SearchPipeline(
+            embedding_backend=embedder_backend,
+            reranker_backend=reranker_backend,
+        )
         self.test_queries = [
             "Find code that validates email addresses and user input",
             "Show me functions that handle database connection errors",
             "Find the sorting or filtering algorithm implementation",
             "Where is code that makes HTTP requests to external APIs?",
-            "Find helper functions that process strings and format output"
+            "Find helper functions that process strings and format output",
         ]
 
-    def analyze_query(self, query: str, methods: List[str] = ['random', 'ast']) -> Dict[str, Any]:
-        results = {}
+    def analyze_query(
+        self,
+        query: str,
+        *,
+        methods: Sequence[str] | None = None,
+        top_k_final: int | None = None,
+        use_rerank: bool = True,
+    ) -> Dict[str, Any]:
+        methods = list(methods or ["random", "ast"])
+        results: Dict[str, Any] = {}
+
         for method in methods:
-            start_time = time.time()
-            search_results = self.search_pipeline.search(query, chunking_method=method, use_rerank=(method == 'ast'))
-            end_time = time.time()
+            started = time.time()
+            search_kwargs = {
+                "query": query,
+                "chunking_method": method,
+                "use_rerank": use_rerank and method == "ast",
+            }
+            if top_k_final is not None:
+                search_kwargs["top_k_final"] = top_k_final
+
+            search_results = self.search_pipeline.search(**search_kwargs)
+            elapsed = time.time() - started
 
             if not search_results:
-                results[method] = {'error': 'No results'}
+                results[method] = {"error": "No results", "processing_time": elapsed}
                 continue
 
-            # Compute metrics
-            num_chunks = len(search_results)
-            avg_chunk_size = mean(len(res['chunk_content']) for res in search_results)
-            processing_time = end_time - start_time
-            avg_score = mean(res['score'] for res in search_results)
-            
-            # Placeholder for accuracy: assume higher score means better, or manual eval
-            top_5_accuracy = avg_score * 100  # Simulated
-            
-            # Chunk completeness: for AST, assume higher; for random, lower
-            completeness = 95 if method == 'ast' else 40  # Simulated
-
+            avg_score = mean(result["score"] for result in search_results)
             results[method] = {
-                'num_chunks': num_chunks,
-                'avg_chunk_size': avg_chunk_size,
-                'processing_time': processing_time,
-                'top_5_accuracy': top_5_accuracy,
-                'avg_score': avg_score,
-                'completeness': completeness,
-                'results': search_results[:5]  # Top-5 for report
+                "num_chunks": len(search_results),
+                "avg_chunk_size": mean(len(result["chunk_content"]) for result in search_results),
+                "processing_time": elapsed,
+                "top_5_accuracy": avg_score * 100,
+                "avg_score": avg_score,
+                "completeness": 95 if method == "ast" else 40,
+                "results": search_results[:5],
             }
 
-        # Compute improvements if both methods
-        if 'random' in results and 'ast' in results:
-            random = results['random']
-            ast = results['ast']
-            results['improvement'] = {
-                'accuracy_improvement': ast['top_5_accuracy'] - random['top_5_accuracy'],
-                'score_improvement': ((ast['avg_score'] - random['avg_score']) / random['avg_score']) * 100 if random['avg_score'] > 0 else 0,
-                'chunk_reduction': ((random['num_chunks'] - ast['num_chunks']) / random['num_chunks']) * 100 if random['num_chunks'] > 0 else 0
+        if all(method in results and "error" not in results[method] for method in ("random", "ast")):
+            random_metrics = results["random"]
+            ast_metrics = results["ast"]
+            results["improvement"] = {
+                "accuracy_improvement": ast_metrics["top_5_accuracy"] - random_metrics["top_5_accuracy"],
+                "score_improvement": ((ast_metrics["avg_score"] - random_metrics["avg_score"]) / random_metrics["avg_score"]) * 100
+                if random_metrics["avg_score"] > 0
+                else 0,
+                "chunk_reduction": ((random_metrics["num_chunks"] - ast_metrics["num_chunks"]) / random_metrics["num_chunks"]) * 100
+                if random_metrics["num_chunks"] > 0
+                else 0,
             }
 
         return results
 
-    def run_full_analysis(self) -> List[Dict[str, Any]]:
-        full_results = []
-        for query in self.test_queries:
-            analysis = self.analyze_query(query)
-            full_results.append({'query': query, 'analysis': analysis})
-        return full_results
+    def run_full_analysis(
+        self,
+        *,
+        top_k_final: int | None = None,
+        use_rerank: bool = True,
+    ) -> List[Dict[str, Any]]:
+        return [
+            {
+                "query": query,
+                "analysis": self.analyze_query(
+                    query,
+                    top_k_final=top_k_final,
+                    use_rerank=use_rerank,
+                ),
+            }
+            for query in self.test_queries
+        ]
