@@ -26,6 +26,29 @@ class TestCLI(unittest.TestCase):
         self.assertIn("embedder backend", output.lower())
         self.assertIn("reranker backend", output.lower())
 
+    def test_doctor_json_can_report_oracle_storage(self):
+        stdout = io.StringIO()
+        with patch("cast_ollama.diagnostics.get_storage_backend", return_value="oracle"), patch(
+            "sys.argv",
+            [
+                "cast-ollama",
+                "--action",
+                "doctor",
+                "--storage-backend",
+                "oracle",
+                "--embedding-backend",
+                "hash",
+                "--reranker-backend",
+                "lexical",
+                "--output",
+                "json",
+            ],
+        ), redirect_stdout(stdout):
+            main()
+        payload = __import__("json").loads(stdout.getvalue())
+        self.assertEqual(payload["config"]["storage_backend_requested"], "oracle")
+        self.assertEqual(payload["config"]["storage_backend_resolved"], "oracle")
+
     def test_demo_command_creates_reports(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             stdout = io.StringIO()

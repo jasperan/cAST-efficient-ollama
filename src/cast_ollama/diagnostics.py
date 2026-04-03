@@ -8,6 +8,8 @@ import requests
 from cast_ollama.config import Config
 from cast_ollama.embedding.embedder import CodeEmbedder
 from cast_ollama.embedding.reranker import CodeReranker
+from cast_ollama.oracle_db.operations import get_storage_backend
+
 
 def _module_status(module_name: str) -> Tuple[bool, str]:
     try:
@@ -52,13 +54,9 @@ def collect_runtime_status(
     }
 
     resolved_embedding = embedder.active_provider or embedder.active_backend or embedder.backend_name or "unresolved"
-    resolved_reranker = reranker.active_provider or reranker.active_backend or "unresolved"
+    resolved_reranker = reranker.active_provider or reranker.active_backend or reranker.backend_name or "unresolved"
     resolved_endpoint = endpoint or Config.OLLAMA_ENDPOINT
-    requested_storage = str(Config.STORAGE_BACKEND).lower()
-    if Config.LOCAL_ONLY or requested_storage in {"auto", "chroma"}:
-        resolved_storage = "chroma-persistent"
-    else:
-        resolved_storage = "oracle"
+    resolved_storage = get_storage_backend()
 
     return {
         "config": {

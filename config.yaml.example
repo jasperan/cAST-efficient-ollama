@@ -25,6 +25,7 @@ reporting:
   report_dir: .
 
 app:
+  storage_backend: auto
   verbose: false
   chunk_size: 2000
   overlap_percentage: 10

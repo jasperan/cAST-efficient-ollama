@@ -46,6 +46,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--db-user")
     parser.add_argument("--db-password")
     parser.add_argument("--db-dsn")
+    parser.add_argument("--storage-backend", choices=["auto", "chroma", "oracle"], help="Force a storage backend instead of relying on profile/env defaults")
     parser.add_argument("--ollama-endpoint", default=Config.OLLAMA_ENDPOINT)
     parser.add_argument("--ollama-model", default=Config.OLLAMA_MODEL)
     parser.add_argument("--enrich-metadata", nargs="?", const=True, default=False, type=parse_bool)
@@ -80,10 +81,11 @@ def apply_overrides(args) -> tuple[str, str, bool]:
     embedding_backend = args.embedding_backend
     reranker_backend = args.reranker_backend
     enrich_metadata = args.enrich_metadata
+    storage_backend = args.storage_backend or Config.STORAGE_BACKEND
 
     if args.profile == "local":
         Config.LOCAL_ONLY = True
-        Config.STORAGE_BACKEND = "chroma"
+        storage_backend = "chroma"
         if embedding_backend == "auto":
             embedding_backend = "hash"
         if reranker_backend == "auto":
@@ -91,9 +93,9 @@ def apply_overrides(args) -> tuple[str, str, bool]:
         if not args.enrich_metadata:
             enrich_metadata = False
     else:
-        Config.LOCAL_ONLY = False
-        Config.STORAGE_BACKEND = "auto"
+        Config.LOCAL_ONLY = str(storage_backend).lower() == "chroma"
 
+    Config.STORAGE_BACKEND = storage_backend
     Config.EMBEDDING_BACKEND = embedding_backend
     Config.EMBEDDING_PROVIDER = embedding_backend
     Config.RERANKER_BACKEND = reranker_backend

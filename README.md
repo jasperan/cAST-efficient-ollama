@@ -123,6 +123,26 @@ You can still request richer integrations explicitly:
 cast-ollama --action search --embedding-backend sentence-transformers --reranker-backend flag --query "database connection"
 ```
 
+
+## Oracle-backed walkthrough
+
+If you want to force the real Oracle path, install the Oracle extra and point the CLI at an Oracle Database Free instance:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[oracle]"
+export ORACLE_USER=your_user
+export ORACLE_PASSWORD=your_password
+export ORACLE_DSN=localhost:1521/freepdb1
+cast-ollama --action doctor --storage-backend oracle --embedding-backend hash --reranker-backend lexical --output json
+cast-ollama --action setup --storage-backend oracle --embedding-backend hash --reranker-backend lexical
+cast-ollama --action vectorize --storage-backend oracle --embedding-backend hash --reranker-backend lexical --chunking-method both --sample-file examples/sample.py
+cast-ollama --action search --storage-backend oracle --embedding-backend hash --reranker-backend lexical --chunking-method both --query "validate email" --report-dir ./reports
+```
+
+The `--storage-backend oracle` flag disables the automatic Chroma fallback for diagnostics and validation so you can confirm the real Oracle path is healthy.
+
 ## Configuration
 
 Copy the example file if you want to pin config values:

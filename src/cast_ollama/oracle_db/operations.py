@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import array
 import json
 import logging
 from typing import Dict, List, Optional
@@ -49,6 +50,11 @@ def _use_fallback() -> bool:
 def get_storage_backend() -> str:
     return "chroma-persistent" if _use_fallback() else "oracle"
 
+
+
+
+def _read_lob(value):
+    return value.read() if hasattr(value, "read") else value
 
 def _require_fallback() -> None:
     if not CHROMA_AVAILABLE or chroma_wrapper is None:
@@ -109,7 +115,7 @@ def insert_chunk(
                 metadata.get("purpose"),
                 dependencies,
                 metadata.get("complexity"),
-                embedding.tolist(),
+                array.array("f", embedding.tolist()),
                 chunking_method,
                 metadata_json,
             ),
@@ -161,7 +167,7 @@ def bulk_insert_chunks(chunks: List[Dict]):
                     metadata.get("purpose"),
                     dependencies,
                     metadata.get("complexity"),
-                    embedding_list,
+                    array.array("f", embedding_list),
                     chunk["chunking_method"],
                     metadata_json,
                 )
@@ -202,21 +208,23 @@ def search_by_vector(
     cursor = conn.cursor()
 
     try:
-        query_embedding_list = query_embedding.tolist()
-        where_clause = "WHERE chunking_method = :3" if chunking_method else ""
-        params = [limit, query_embedding_list]
+        params = {
+            "limit": limit,
+            "query_embedding": array.array("f", query_embedding.tolist()),
+        }
+        where_clause = "WHERE chunking_method = :chunking_method" if chunking_method else ""
         if chunking_method:
-            params.append(chunking_method)
+            params["chunking_method"] = chunking_method
 
         search_sql = f"""
         SELECT chunk_id, file_path, chunk_content, chunk_type, start_line, end_line,
                function_name, parent_class, docstring, purpose, dependencies, complexity,
                chunking_method, metadata_json,
-               VECTOR_DISTANCE(embedding, :2, COSINE) as distance
+               VECTOR_DISTANCE(embedding, :query_embedding, COSINE) as distance
         FROM code_chunks
         {where_clause}
         ORDER BY distance ASC
-        FETCH FIRST :1 ROWS ONLY
+        FETCH FIRST :limit ROWS ONLY
         """
         cursor.execute(search_sql, params)
 
@@ -226,18 +234,18 @@ def search_by_vector(
                 {
                     "chunk_id": row[0],
                     "file_path": row[1],
-                    "chunk_content": row[2],
+                    "chunk_content": _read_lob(row[2]),
                     "chunk_type": row[3],
                     "start_line": row[4],
                     "end_line": row[5],
                     "function_name": row[6],
                     "parent_class": row[7],
-                    "docstring": row[8],
-                    "purpose": row[9],
-                    "dependencies": json.loads(row[10]),
+                    "docstring": _read_lob(row[8]),
+                    "purpose": _read_lob(row[9]),
+                    "dependencies": json.loads(_read_lob(row[10]) or "[]"),
                     "complexity": row[11],
                     "chunking_method": row[12],
-                    "metadata_json": json.loads(row[13]),
+                    "metadata_json": json.loads(_read_lob(row[13]) or "{}"),
                     "distance": row[14],
                 }
             )
@@ -275,18 +283,18 @@ def get_chunk_by_id(chunk_id: str) -> Optional[Dict]:
             return {
                 "chunk_id": row[0],
                 "file_path": row[1],
-                "chunk_content": row[2],
+                "chunk_content": _read_lob(row[2]),
                 "chunk_type": row[3],
                 "start_line": row[4],
                 "end_line": row[5],
                 "function_name": row[6],
                 "parent_class": row[7],
-                "docstring": row[8],
-                "purpose": row[9],
-                "dependencies": json.loads(row[10]),
+                "docstring": _read_lob(row[8]),
+                "purpose": _read_lob(row[9]),
+                "dependencies": json.loads(_read_lob(row[10]) or "[]"),
                 "complexity": row[11],
                 "chunking_method": row[12],
-                "metadata_json": json.loads(row[13]),
+                "metadata_json": json.loads(_read_lob(row[13]) or "{}"),
             }
         return None
     except oracledb.Error as exc:

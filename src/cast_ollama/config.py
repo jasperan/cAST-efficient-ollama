@@ -19,7 +19,14 @@ class AppConfig:
         "reranker": {"model": "BAAI/bge-reranker-v2-m3", "backend": "lexical"},
         "chroma": {"persist_dir": ".cast_ollama/chroma", "collection": "code_chunks"},
         "reporting": {"report_dir": "."},
-        "app": {"verbose": False, "chunk_size": 2000, "overlap_percentage": 10, "top_k_retrieval": 150, "top_k_rerank": 20},
+        "app": {
+            "storage_backend": "auto",
+            "verbose": False,
+            "chunk_size": 2000,
+            "overlap_percentage": 10,
+            "top_k_retrieval": 150,
+            "top_k_rerank": 20,
+        },
     }
 
     def __init__(self) -> None:
@@ -27,7 +34,6 @@ class AppConfig:
 
     def _load_config(self) -> None:
         config_data = self._load_yaml_config()
-        self.CONFIG_PATH = "config.yaml" if Path("config.yaml").exists() else None
         self.CONFIG_PATH = str(Path("config.yaml")) if Path("config.yaml").exists() else None
 
         self.ORACLE_USER = self._resolve(config_data, "oracle", "user", env="ORACLE_USER")
@@ -54,19 +60,19 @@ class AppConfig:
         self.REPORT_DIR = self._resolve(config_data, "reporting", "report_dir", env="REPORT_DIR")
         self.EXPORT_DIR = os.getenv("EXPORT_DIR", self.REPORT_DIR)
         self.OUTPUT_DIR = self.EXPORT_DIR
-        self.OUTPUT_DIR = self.REPORT_DIR
-        self.OUTPUT_DIR = self.EXPORT_DIR
-        self.OUTPUT_DIR = self.EXPORT_DIR
 
+        self.STORAGE_BACKEND = self._resolve(config_data, "app", "storage_backend", env="STORAGE_BACKEND")
         self.VERBOSE = self._as_bool(self._resolve(config_data, "app", "verbose", env="VERBOSE"))
         self.CHUNK_SIZE = int(self._resolve(config_data, "app", "chunk_size", env="CHUNK_SIZE"))
         self.OVERLAP_PERCENTAGE = int(self._resolve(config_data, "app", "overlap_percentage", env="OVERLAP_PERCENTAGE"))
         self.TOP_K_RETRIEVAL = int(self._resolve(config_data, "app", "top_k_retrieval", env="TOP_K_RETRIEVAL"))
         self.TOP_K_RERANK = int(self._resolve(config_data, "app", "top_k_rerank", env="TOP_K_RERANK"))
-        self.STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", os.getenv("BACKEND", "auto"))
         self.LOCAL_ONLY = self._as_bool(os.getenv("LOCAL_ONLY", False))
         self.EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", self.EMBEDDING_BACKEND)
         self.RERANKER_PROVIDER = os.getenv("RERANKER_PROVIDER", self.RERANKER_BACKEND)
+
+        if self.LOCAL_ONLY and str(self.STORAGE_BACKEND).lower() == "auto":
+            self.STORAGE_BACKEND = "chroma"
 
     def _load_yaml_config(self) -> dict:
         config_file = Path("config.yaml")
@@ -111,8 +117,6 @@ class AppConfig:
             self.REPORT_DIR = overrides["EXPORT_DIR"]
             self.EXPORT_DIR = overrides["EXPORT_DIR"]
             self.OUTPUT_DIR = overrides["EXPORT_DIR"]
-            self.EXPORT_DIR = overrides["EXPORT_DIR"]
-            self.OUTPUT_DIR = overrides["EXPORT_DIR"]
         if "OUTPUT_DIR" in overrides and overrides["OUTPUT_DIR"] is not None:
             self.REPORT_DIR = overrides["OUTPUT_DIR"]
             self.EXPORT_DIR = overrides["OUTPUT_DIR"]
@@ -123,6 +127,9 @@ class AppConfig:
         if "CHROMA_PERSIST_DIR" in overrides and overrides["CHROMA_PERSIST_DIR"] is not None:
             self.CHROMA_PERSIST_DIR = overrides["CHROMA_PERSIST_DIR"]
             self.CHROMA_PATH = overrides["CHROMA_PERSIST_DIR"]
+        if "STORAGE_BACKEND" in overrides and overrides["STORAGE_BACKEND"] is not None:
+            self.STORAGE_BACKEND = overrides["STORAGE_BACKEND"]
+
         if self.LOCAL_ONLY and str(self.STORAGE_BACKEND).lower() == "auto":
             self.STORAGE_BACKEND = "chroma"
 

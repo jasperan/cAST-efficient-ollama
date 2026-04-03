@@ -8,7 +8,7 @@ from cast_ollama.oracle_db.connection import DBConnection, oracledb
 logger = logging.getLogger(__name__)
 
 
-def create_tables():
+def create_tables() -> None:
     if oracledb is None:
         raise RuntimeError("oracledb is not installed; setup requires the Oracle backend.")
 
@@ -40,12 +40,15 @@ def create_tables():
         cursor.execute(create_table_sql)
 
         create_index_sql = """
-        CREATE VECTOR INDEX code_chunks_embedding_idx ON code_chunks(embedding)
+        CREATE VECTOR INDEX code_chunks_embedding_idx ON code_chunks (embedding)
+        ORGANIZATION INMEMORY NEIGHBOR GRAPH
+        DISTANCE COSINE
+        WITH TARGET ACCURACY 95
         """
         cursor.execute(create_index_sql)
 
         conn.commit()
-        logger.info("Table and index created successfully.")
+        logger.info("Table and vector index created successfully.")
     except oracledb.Error as exc:
         logger.error("Error creating tables: %s", exc)
         conn.rollback()
