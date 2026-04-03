@@ -1,0 +1,16 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: block-generated-artifacts
+        name: Block generated agent artifacts
+        entry: python scripts/block_generated_artifacts.py
+        language: system
+        pass_filenames: true

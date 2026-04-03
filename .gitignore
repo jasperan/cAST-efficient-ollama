@@ -31,3 +31,37 @@ Temporary Items
 .crt
 .csr
 .pem
+
+# Local authoring / agent state
+.omx/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# AI-assistant / planning artifacts (never commit)
+CLAUDE.md
+docs/plans/
+task_plan.md
+findings.md
+progress.md
+IMPLEMENTATION.md
+IMPLEMENTATION-*.md
+*_IMPLEMENTATION.md
+AGENT_NOTES.md
+PLAN.md
+PLAN-*.md
+
+# Dogfood / QA output
+dogfood-output/
+.playwright-mcp/
+
+# Generated review / summary docs
+TESTING_REPORT.md
+AGENT_HARNESS_ANNEX.md
+SKILLS_EXECUTION_SUMMARY.md
+CODE_REVIEW.md
+SECURITY_REVIEW.md
+*_FEATURES.md
+*_ENHANCEMENTS.md
+*_REPORT.md
