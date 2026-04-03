@@ -132,10 +132,11 @@ def search_by_vector(
 
     where_filter = {"chunking_method": chunking_method} if chunking_method else None
     q_emb = query_embedding.tolist() if hasattr(query_embedding, "tolist") else query_embedding
+    n_results = max(1, min(limit, collection.count() or 1))
 
     results = collection.query(
         query_embeddings=[q_emb],
-        n_results=limit,
+        n_results=n_results,
         where=where_filter,
     )
 

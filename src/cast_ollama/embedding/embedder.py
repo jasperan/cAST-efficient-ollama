@@ -162,7 +162,7 @@ class CodeEmbedder:
                 self.dimension = int(vectors.shape[1])
                 self.backend_name = backend_name
                 self.active_backend = backend_name
-                self.active_provider = backend_name
+                self.active_provider = "local-hash" if backend_name == "hash" else backend_name
                 return vectors
             except Exception as exc:
                 last_error = exc if isinstance(exc, BackendUnavailableError) else BackendUnavailableError(str(exc))

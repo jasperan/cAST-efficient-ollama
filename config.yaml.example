@@ -6,7 +6,23 @@ oracle:
 ollama:
   endpoint: http://localhost:11434
   model: llama2
-  embed_model: nomic-embed-text:latest
+  embed_model: nomic-embed-text
+
+embedding:
+  model: microsoft/codebert-base
+  backend: hash
+  dimension: 768
+
+reranker:
+  model: BAAI/bge-reranker-v2-m3
+  backend: lexical
+
+chroma:
+  persist_dir: .cast_ollama/chroma
+  collection: code_chunks
+
+reporting:
+  report_dir: .
 
 app:
   verbose: false
@@ -14,11 +30,3 @@ app:
   overlap_percentage: 10
   top_k_retrieval: 150
   top_k_rerank: 20
-  embedding_backend: auto
-  sentence_transformer_model: microsoft/codebert-base
-  reranker_backend: auto
-  reranker_model: BAAI/bge-reranker-v2-m3
-  embedding_dimension: 768
-  chroma_persist_dir: .cast_ollama/chroma
-  chroma_collection: code_chunks
-  output_dir: .
