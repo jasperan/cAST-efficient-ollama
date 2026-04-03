@@ -12,9 +12,9 @@ set -euo pipefail
 #   PROJECT_DIR=/opt/myapp curl -fsSL ... | bash
 # ============================================================
 
-REPO_URL="https://github.com/jasperan/cAST-efficient-ollama.git"
-PROJECT="cAST-efficient-ollama"
-BRANCH="main"
+REPO_URL="${REPO_URL:-https://github.com/jasperan/cAST-efficient-ollama.git}"
+PROJECT="${PROJECT_NAME:-cAST-efficient-ollama}"
+BRANCH="${BRANCH:-main}"
 INSTALL_DIR="${PROJECT_DIR:-$(pwd)/$PROJECT}"
 
 # ── Colors ──────────────────────────────────────────────────
@@ -121,7 +121,9 @@ print_done() {
     echo -e "  ${BOLD}Location:${NC}  $INSTALL_DIR"
     echo -e "  ${BOLD}Activate:${NC}  source $INSTALL_DIR/.venv/bin/activate"
     echo ""
-    echo -e "  ${BOLD}Note:${NC}     Oracle Database connection required — see README for setup"
+    echo -e "  ${BOLD}Next step:${NC} cast-ollama --action doctor --profile local"
+    echo -e "  ${BOLD}Local demo:${NC} cast-ollama --action demo --profile local --sample-file examples/sample.py"
+    echo -e "  ${BOLD}Note:${NC}      Oracle is optional; local Chroma mode works out of the box"
     echo ""
 }
 

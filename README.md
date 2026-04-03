@@ -25,6 +25,12 @@ source .venv/bin/activate
 pip install -e .
 ```
 
+Install only the lightweight local mode above, or opt into richer integrations when you need them:
+
+```bash
+pip install -e ".[models,ollama,oracle]"
+```
+
 ### Option 2: use the helper script
 
 ```bash
@@ -38,19 +44,19 @@ This is the recommended README-reader flow.
 ### 1) Check the environment
 
 ```bash
-python main.py --action doctor --profile local
+cast-ollama --action doctor --profile local
 ```
 
 JSON output is also available:
 
 ```bash
-python main.py --action doctor --profile local --output json
+cast-ollama --action doctor --profile local --output json
 ```
 
 ### 2) Run the end-to-end demo
 
 ```bash
-python main.py --action demo --profile local --sample-file examples/sample.py --report-dir ./reports
+cast-ollama --action demo --profile local --sample-file examples/sample.py --report-dir ./reports
 ```
 
 This writes:
@@ -71,7 +77,7 @@ python -m unittest discover tests -v
 - Oracle mode:
 
 ```bash
-python main.py --action setup
+cast-ollama --action setup
 ```
 
 - Local Chroma fallback is used automatically when Oracle is unavailable.
@@ -79,13 +85,13 @@ python main.py --action setup
 ### Vectorize a file
 
 ```bash
-python main.py --action vectorize --profile local --chunking-method both --sample-file examples/sample.py
+cast-ollama --action vectorize --profile local --chunking-method both --sample-file examples/sample.py
 ```
 
 ### Search indexed chunks
 
 ```bash
-python main.py --action search --profile local --chunking-method both --query "validate email" --report-dir ./reports
+cast-ollama --action search --profile local --chunking-method both --query "validate email" --report-dir ./reports
 ```
 
 This writes:
@@ -100,7 +106,7 @@ This writes:
 Use this when you want the most reliable no-surprises experience:
 
 ```bash
-python main.py --action demo --profile local
+cast-ollama --action demo --profile local
 ```
 
 It prefers:
@@ -114,7 +120,7 @@ It prefers:
 You can still request richer integrations explicitly:
 
 ```bash
-python main.py --action search --embedding-backend sentence-transformers --reranker-backend flag --query "database connection"
+cast-ollama --action search --embedding-backend sentence-transformers --reranker-backend flag --query "database connection"
 ```
 
 ## Configuration
