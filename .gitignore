@@ -39,6 +39,12 @@ Temporary Items
 __pycache__/
 *.py[cod]
 *.egg-info/
+.agents/
+.claude/
+.crush/
+.openhands/
+.serena/
+content/
 
 # AI-assistant / planning artifacts (never commit)
 CLAUDE.md

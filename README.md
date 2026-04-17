@@ -198,14 +198,14 @@ python demo_paper.py
 
 ## Project structure
 
-- `src/cast_ollama/cli.py` — CLI entrypoint
-- `src/cast_ollama/chunking/` — random and AST-aware chunkers
-- `src/cast_ollama/embedding/` — embedding + reranker backends with fallbacks
-- `src/cast_ollama/retrieval/` — search pipeline
-- `src/cast_ollama/chroma_db/` — local vector-store fallback
-- `src/cast_ollama/oracle_db/` — Oracle integration
-- `src/cast_ollama/demo.py` — reusable end-to-end demo flow
-- `tests/` — unit + walkthrough-oriented tests
+- `src/cast_ollama/cli.py`: CLI entrypoint
+- `src/cast_ollama/chunking/`: random and AST-aware chunkers
+- `src/cast_ollama/embedding/`: embedding + reranker backends with fallbacks
+- `src/cast_ollama/retrieval/`: search pipeline
+- `src/cast_ollama/chroma_db/`: local vector-store fallback
+- `src/cast_ollama/oracle_db/`: Oracle integration
+- `src/cast_ollama/demo.py`: reusable end-to-end demo flow
+- `tests/`: unit + walkthrough-oriented tests
 
 ## Notes
 
