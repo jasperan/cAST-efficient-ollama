@@ -61,7 +61,7 @@ class Analyzer:
                 "num_chunks": len(search_results),
                 "avg_chunk_size": mean(len(result["chunk_content"]) for result in search_results),
                 "processing_time": elapsed,
-                "top_5_accuracy": avg_score * 100,
+                "avg_top5_score": avg_score * 100,
                 "avg_score": avg_score,
                 "completeness": 95 if method == "ast" else 40,
                 "results": search_results[:5],
@@ -71,7 +71,7 @@ class Analyzer:
             random_metrics = results["random"]
             ast_metrics = results["ast"]
             results["improvement"] = {
-                "accuracy_improvement": ast_metrics["top_5_accuracy"] - random_metrics["top_5_accuracy"],
+                "score_delta": ast_metrics["avg_top5_score"] - random_metrics["avg_top5_score"],
                 "score_improvement": ((ast_metrics["avg_score"] - random_metrics["avg_score"]) / random_metrics["avg_score"]) * 100
                 if random_metrics["avg_score"] > 0
                 else 0,

@@ -158,11 +158,7 @@ class ASTChunker:
                     "start_line": start_line,
                     "end_line": end_line,
                 }
-                if self._count_non_whitespace(snippet) <= self.chunk_size:
-                    chunks.append(chunk)
-                elif isinstance(node, ast.ClassDef):
-                    visit(node.body, node.name)
-                else:
+                if self._count_non_whitespace(snippet) <= self.chunk_size or not isinstance(node, ast.ClassDef):
                     chunks.append(chunk)
 
                 if isinstance(node, ast.ClassDef):

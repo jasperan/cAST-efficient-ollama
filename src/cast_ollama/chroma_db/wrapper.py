@@ -62,6 +62,36 @@ class ChromaDBWrapper:
 
 # Standalone functions matching oracle_db.operations signature
 
+def _parse_dependencies(meta: Dict) -> List:
+    try:
+        return json.loads(meta.get("dependencies", "[]"))
+    except Exception:
+        return []
+
+
+def _meta_to_chunk(chunk_id: str, content: str, meta: Dict) -> Dict:
+    """Build a chunk dict from a Chroma id, document, and metadata blob."""
+    return {
+        "chunk_id": chunk_id,
+        "file_path": meta.get("file_path"),
+        "chunk_content": content,
+        "chunk_type": meta.get("chunk_type"),
+        "start_line": meta.get("start_line"),
+        "end_line": meta.get("end_line"),
+        "function_name": meta.get("function_name"),
+        "class_name": meta.get("class_name"),
+        "symbol_name": meta.get("symbol_name"),
+        "symbol_path": meta.get("symbol_path"),
+        "parent_class": meta.get("parent_class"),
+        "docstring": meta.get("docstring"),
+        "purpose": meta.get("purpose"),
+        "dependencies": _parse_dependencies(meta),
+        "complexity": meta.get("complexity"),
+        "chunking_method": meta.get("chunking_method"),
+        "metadata_json": meta,
+    }
+
+
 def insert_chunk(
     chunk_id: str,
     file_path: str,
@@ -146,34 +176,9 @@ def search_by_vector(
     transformed_results = []
     for index, chunk_id in enumerate(results["ids"][0]):
         meta = results["metadatas"][0][index]
-        deps = meta.get("dependencies", "[]")
-        try:
-            deps_list = json.loads(deps)
-        except Exception:
-            deps_list = []
-
-        transformed_results.append(
-            {
-                "chunk_id": chunk_id,
-                "file_path": meta.get("file_path"),
-                "chunk_content": results["documents"][0][index],
-                "chunk_type": meta.get("chunk_type"),
-                "start_line": meta.get("start_line"),
-                "end_line": meta.get("end_line"),
-                "function_name": meta.get("function_name"),
-                "class_name": meta.get("class_name"),
-                "symbol_name": meta.get("symbol_name"),
-                "symbol_path": meta.get("symbol_path"),
-                "parent_class": meta.get("parent_class"),
-                "docstring": meta.get("docstring"),
-                "purpose": meta.get("purpose"),
-                "dependencies": deps_list,
-                "complexity": meta.get("complexity"),
-                "chunking_method": meta.get("chunking_method"),
-                "metadata_json": meta,
-                "distance": results["distances"][0][index],
-            }
-        )
+        chunk = _meta_to_chunk(chunk_id, results["documents"][0][index], meta)
+        chunk["distance"] = results["distances"][0][index]
+        transformed_results.append(chunk)
 
     return transformed_results
 
@@ -187,31 +192,7 @@ def get_chunk_by_id(chunk_id: str) -> Optional[Dict]:
         return None
 
     meta = result["metadatas"][0]
-    deps = meta.get("dependencies", "[]")
-    try:
-        deps_list = json.loads(deps)
-    except Exception:
-        deps_list = []
-
-    return {
-        "chunk_id": result["ids"][0],
-        "file_path": meta.get("file_path"),
-        "chunk_content": result["documents"][0],
-        "chunk_type": meta.get("chunk_type"),
-        "start_line": meta.get("start_line"),
-        "end_line": meta.get("end_line"),
-        "function_name": meta.get("function_name"),
-        "class_name": meta.get("class_name"),
-        "symbol_name": meta.get("symbol_name"),
-        "symbol_path": meta.get("symbol_path"),
-        "parent_class": meta.get("parent_class"),
-        "docstring": meta.get("docstring"),
-        "purpose": meta.get("purpose"),
-        "dependencies": deps_list,
-        "complexity": meta.get("complexity"),
-        "chunking_method": meta.get("chunking_method"),
-        "metadata_json": meta,
-    }
+    return _meta_to_chunk(result["ids"][0], result["documents"][0], meta)
 
 
 def delete_all_chunks():

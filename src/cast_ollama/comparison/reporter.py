@@ -22,7 +22,7 @@ class Reporter:
         lines.append(f"├─ Chunks Generated: {metrics['num_chunks']}")
         lines.append(f"├─ Avg Chunk Size: {metrics['avg_chunk_size']:.0f} chars")
         lines.append(f"├─ Processing Time: {metrics['processing_time']:.2f}s")
-        lines.append(f"├─ Top-5 Accuracy: {metrics['top_5_accuracy']:.0f}%")
+        lines.append(f"├─ Avg Top-5 Score: {metrics['avg_top5_score']:.0f}")
         lines.append(f"├─ Avg Score: {metrics['avg_score']:.2f}")
         lines.append("└─ Notes:")
         lines.extend(f"   • {issue}" for issue in issues)
@@ -66,7 +66,7 @@ class Reporter:
         if "improvement" in analysis:
             improvement = analysis["improvement"]
             report.append("RERANKING IMPACT (cAST only):")
-            report.append(f"├─ Accuracy Improvement: +{improvement['accuracy_improvement']:.1f}%")
+            report.append(f"├─ Avg Top-5 Score Delta: +{improvement['score_delta']:.1f}")
             report.append(f"├─ Score Improvement: +{improvement['score_improvement']:.1f}%")
             report.append(f"├─ Chunk Reduction: {improvement['chunk_reduction']:.1f}%")
             report.append("└─ Processing Time: Additional reranking cost depends on backend\n")
@@ -94,7 +94,7 @@ class Reporter:
                         "num_chunks": metrics["num_chunks"],
                         "avg_chunk_size": metrics["avg_chunk_size"],
                         "processing_time": metrics["processing_time"],
-                        "top_5_accuracy": metrics["top_5_accuracy"],
+                        "avg_top5_score": metrics["avg_top5_score"],
                         "avg_score": metrics["avg_score"],
                         "completeness": metrics["completeness"],
                     }

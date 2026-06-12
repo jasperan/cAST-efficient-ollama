@@ -56,6 +56,26 @@ def get_storage_backend() -> str:
 def _read_lob(value):
     return value.read() if hasattr(value, "read") else value
 
+
+def _row_to_chunk(row) -> Dict:
+    """Map a selected ``code_chunks`` row (columns 0-13) to a chunk dict."""
+    return {
+        "chunk_id": row[0],
+        "file_path": row[1],
+        "chunk_content": _read_lob(row[2]),
+        "chunk_type": row[3],
+        "start_line": row[4],
+        "end_line": row[5],
+        "function_name": row[6],
+        "parent_class": row[7],
+        "docstring": _read_lob(row[8]),
+        "purpose": _read_lob(row[9]),
+        "dependencies": json.loads(_read_lob(row[10]) or "[]"),
+        "complexity": row[11],
+        "chunking_method": row[12],
+        "metadata_json": json.loads(_read_lob(row[13]) or "{}"),
+    }
+
 def _require_fallback() -> None:
     if not CHROMA_AVAILABLE or chroma_wrapper is None:
         raise RuntimeError(
@@ -230,25 +250,9 @@ def search_by_vector(
 
         results = []
         for row in cursor:
-            results.append(
-                {
-                    "chunk_id": row[0],
-                    "file_path": row[1],
-                    "chunk_content": _read_lob(row[2]),
-                    "chunk_type": row[3],
-                    "start_line": row[4],
-                    "end_line": row[5],
-                    "function_name": row[6],
-                    "parent_class": row[7],
-                    "docstring": _read_lob(row[8]),
-                    "purpose": _read_lob(row[9]),
-                    "dependencies": json.loads(_read_lob(row[10]) or "[]"),
-                    "complexity": row[11],
-                    "chunking_method": row[12],
-                    "metadata_json": json.loads(_read_lob(row[13]) or "{}"),
-                    "distance": row[14],
-                }
-            )
+            chunk = _row_to_chunk(row)
+            chunk["distance"] = row[14]
+            results.append(chunk)
 
         return results
     except oracledb.Error as exc:
@@ -280,22 +284,7 @@ def get_chunk_by_id(chunk_id: str) -> Optional[Dict]:
 
         row = cursor.fetchone()
         if row:
-            return {
-                "chunk_id": row[0],
-                "file_path": row[1],
-                "chunk_content": _read_lob(row[2]),
-                "chunk_type": row[3],
-                "start_line": row[4],
-                "end_line": row[5],
-                "function_name": row[6],
-                "parent_class": row[7],
-                "docstring": _read_lob(row[8]),
-                "purpose": _read_lob(row[9]),
-                "dependencies": json.loads(_read_lob(row[10]) or "[]"),
-                "complexity": row[11],
-                "chunking_method": row[12],
-                "metadata_json": json.loads(_read_lob(row[13]) or "{}"),
-            }
+            return _row_to_chunk(row)
         return None
     except oracledb.Error as exc:
         logger.error("Error getting chunk %s: %s", chunk_id, exc)

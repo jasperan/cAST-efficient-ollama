@@ -16,13 +16,11 @@ class SearchPipeline:
         self,
         *,
         embedding_backend: str | None = None,
-        embedder_backend: str | None = None,
         reranker_backend: str | None = None,
         embedder: CodeEmbedder | None = None,
         reranker: CodeReranker | None = None,
     ):
-        resolved_embedding_backend = embedding_backend or embedder_backend
-        self.embedder = embedder or CodeEmbedder(backend=resolved_embedding_backend)
+        self.embedder = embedder or CodeEmbedder(backend=embedding_backend)
         self.reranker = reranker or CodeReranker(backend=reranker_backend)
 
     def _expand_context(self, result: Dict, all_results: List[Dict]) -> Dict:

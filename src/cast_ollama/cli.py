@@ -53,9 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--rerank", nargs="?", const=True, default=True, type=parse_bool)
     parser.add_argument("--append", nargs="?", const=True, default=False, type=parse_bool)
     parser.add_argument("--embedding-backend", dest="embedding_backend", choices=["auto", "sentence-transformers", "transformers", "hash", "local", "local-hash", "ollama"], default=Config.EMBEDDING_BACKEND)
-    parser.add_argument("--embedding-provider", dest="embedding_backend", choices=["auto", "sentence-transformers", "transformers", "hash", "local", "local-hash", "ollama"], help=argparse.SUPPRESS)
     parser.add_argument("--reranker-backend", dest="reranker_backend", choices=["auto", "flag", "flagembedding", "flag-embedding", "lexical", "local"], default=Config.RERANKER_BACKEND)
-    parser.add_argument("--reranker-provider", dest="reranker_backend", choices=["auto", "flag", "flagembedding", "flag-embedding", "lexical", "local"], help=argparse.SUPPRESS)
     parser.add_argument("--verbose", action="store_true")
     return parser
 

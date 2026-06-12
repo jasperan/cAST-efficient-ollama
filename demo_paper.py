@@ -111,7 +111,7 @@ def run_demo() -> None:
             "num_chunks": len(random_chunks),
             "avg_chunk_size": mean(len(chunk["content"]) for chunk in random_chunks),
             "processing_time": 0.0,
-            "top_5_accuracy": mean(result["score"] for result in random_results) * 100 if random_results else 0,
+            "avg_top5_score": mean(result["score"] for result in random_results) * 100 if random_results else 0,
             "avg_score": mean(result["score"] for result in random_results) if random_results else 0,
             "completeness": 40,
             "results": random_results,
@@ -120,14 +120,14 @@ def run_demo() -> None:
             "num_chunks": len(ast_chunks),
             "avg_chunk_size": mean(len(chunk["content"]) for chunk in ast_chunks),
             "processing_time": 0.0,
-            "top_5_accuracy": mean(result["score"] for result in ast_reranked) * 100 if ast_reranked else 0,
+            "avg_top5_score": mean(result["score"] for result in ast_reranked) * 100 if ast_reranked else 0,
             "avg_score": mean(result["score"] for result in ast_reranked) if ast_reranked else 0,
             "completeness": 95,
             "results": ast_reranked,
         },
     }
     analysis["improvement"] = {
-        "accuracy_improvement": analysis["ast"]["top_5_accuracy"] - analysis["random"]["top_5_accuracy"],
+        "score_delta": analysis["ast"]["avg_top5_score"] - analysis["random"]["avg_top5_score"],
         "score_improvement": ((analysis["ast"]["avg_score"] - analysis["random"]["avg_score"]) / analysis["random"]["avg_score"] * 100) if analysis["random"]["avg_score"] else 0,
         "chunk_reduction": ((analysis["random"]["num_chunks"] - analysis["ast"]["num_chunks"]) / analysis["random"]["num_chunks"] * 100) if analysis["random"]["num_chunks"] else 0,
     }
