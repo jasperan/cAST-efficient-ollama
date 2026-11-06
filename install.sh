@@ -42,10 +42,17 @@ print_banner() {
 }
 
 clone_repo() {
-    if [ -d "$INSTALL_DIR" ]; then
+    if [ -e "$INSTALL_DIR" ]; then
+        # Never execute content from a path this script did not create: only reuse
+        # a checkout we own whose origin is exactly REPO_URL.
+        [ -d "$INSTALL_DIR/.git" ] && [ -O "$INSTALL_DIR" ] \
+            || fail "$INSTALL_DIR exists but is not a git checkout owned by you. Remove it or set PROJECT_DIR to a new directory."
+        origin=$(git -C "$INSTALL_DIR" remote get-url origin 2>/dev/null) || origin=""
+        [ "$origin" = "$REPO_URL" ] \
+            || fail "$INSTALL_DIR has origin '$origin', expected '$REPO_URL'. Refusing to run its code."
         warn "Directory $INSTALL_DIR already exists"
         info "Pulling latest changes..."
-        (cd "$INSTALL_DIR" && git pull origin "$BRANCH" 2>/dev/null) || true
+        git -C "$INSTALL_DIR" pull origin "$BRANCH" 2>/dev/null || warn "git pull failed; continuing with the existing checkout"
     else
         info "Cloning repository..."
         git clone --depth 1 -b "$BRANCH" "$REPO_URL" "$INSTALL_DIR" || fail "Clone failed. Check your internet connection."
@@ -83,12 +90,9 @@ check_prereqs() {
 
 install_deps() {
     cd "$INSTALL_DIR"
-    if [ ! -d ".venv" ]; then
-        info "Creating virtual environment..."
-        $PYTHON -m venv .venv
-    else
-        info "Using existing virtual environment..."
-    fi
+    # Always rebuild the virtualenv so a pre-existing .venv/bin/activate is never sourced.
+    info "Creating virtual environment..."
+    $PYTHON -m venv --clear .venv
     # shellcheck disable=SC1091
     source .venv/bin/activate
 
