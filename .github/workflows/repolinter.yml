@@ -5,6 +5,9 @@ jobs:
   run_repolinter:
     name: Run Repolinter on pull request
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     container:
       image: ghcr.io/oracledevrel/repolinter:v0.11.1
       credentials:
@@ -16,6 +19,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
+          persist-credentials: false
       - name: Run Repolinter
         run: |
           set +e
